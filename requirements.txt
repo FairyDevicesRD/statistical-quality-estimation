@@ -1,0 +1,6 @@
+numpy
+scipy
+scikit-learn
+toml
+joblib
+-e git+https://github.com/ericsuh/dirichlet.git#egg=dirichlet

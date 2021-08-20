@@ -1,0 +1,32 @@
+[data]
+base_dir = "data"
+
+# input
+creation_path = "creation.tsv"
+review_path = "review.tsv"
+# keep qualification_review_path blank if not available
+qualification_review_path = "qualification_review.tsv"
+
+n_class = 4
+n_creator = 138
+n_reviewer = 20
+n_artifact = 32148
+
+# Output files are created at ${baise_dir} / ${exp_od} / ${iteration}.npz
+exp_id = "dev"
+
+[model]
+use_atanh = true
+weight_review = 5.0
+alpha_prior_std = 0.7071e+2
+beta_prior_std = 0.7071e+2
+
+[optimize.convergence]
+loglikelihood_atol = 1e-5
+loglikelihood_rtol = 1e-6
+mse_threshold = 1e-5
+max_iter = 1000
+
+[optimize.dirichlet]
+tol = 1e-5
+max_iter = 10000

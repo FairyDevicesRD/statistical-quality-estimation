@@ -1,0 +1,98 @@
+diff --git a/dirichlet/dirichlet.py b/dirichlet/dirichlet.py
+index 4ac102c..e28b872 100644
+--- a/dirichlet/dirichlet.py
++++ b/dirichlet/dirichlet.py
+@@ -153,7 +153,7 @@ def meanprecision(a):
+     return (m, s)
+ 
+ 
+-def loglikelihood(D, a):
++def loglikelihood(D, a, prior_std=None):
+     """Compute log likelihood of Dirichlet distribution, i.e. log p(D|a).
+ 
+     Parameters
+@@ -170,10 +170,14 @@ def loglikelihood(D, a):
+         The log likelihood of the Dirichlet distribution"""
+     N, K = D.shape
+     logp = log(D).mean(axis=0)
+-    return N * (gammaln(a.sum()) - gammaln(a).sum() + ((a - 1) * logp).sum())
++    ll = N * (gammaln(a.sum()) - gammaln(a).sum() + ((a - 1) * logp).sum())
++    if prior_std:
++        ll += - 1 / 2 * np.log(np.pi * prior_std ** 2 / 2) \
++              - a.sum() ** 2 / (2 * prior_std ** 2)
++    return ll
+ 
+ 
+-def mle(D, tol=1e-7, method="meanprecision", maxiter=None):
++def mle(D, tol=1e-7, method="meanprecision", maxiter=None, prior_std=None):
+     """Iteratively computes maximum likelihood Dirichlet distribution
+     for an observed data set, i.e. a for which log p(D|a) is maximum.
+ 
+@@ -199,7 +203,7 @@ def mle(D, tol=1e-7, method="meanprecision", maxiter=None):
+         Maximum likelihood parameters for Dirichlet distribution."""
+ 
+     if method == "meanprecision":
+-        return _meanprecision(D, tol=tol, maxiter=maxiter)
++        return _meanprecision(D, tol=tol, maxiter=maxiter, prior_std=prior_std)
+     else:
+         return _fixedpoint(D, tol=tol, maxiter=maxiter)
+ 
+@@ -241,7 +245,7 @@ def _fixedpoint(D, tol=1e-7, maxiter=None):
+     )
+ 
+ 
+-def _meanprecision(D, tol=1e-7, maxiter=None):
++def _meanprecision(D, tol=1e-7, maxiter=None, prior_std=None):
+     """Mean/precision method for MLE of Dirichlet distribution
+ 
+     Uses alternating estimations of mean and precision.
+@@ -277,7 +281,7 @@ def _meanprecision(D, tol=1e-7, maxiter=None):
+     if maxiter is None:
+         maxiter = MAXINT
+     for i in range(maxiter):
+-        a1 = _fit_s(D, a0, logp, tol=tol)
++        a1 = _fit_s(D, a0, logp, tol=tol, prior_std=prior_std)
+         s1 = sum(a1)
+         a1 = _fit_m(D, a1, logp, tol=tol)
+         m = a1 / s1
+@@ -291,7 +295,7 @@ def _meanprecision(D, tol=1e-7, maxiter=None):
+     )
+ 
+ 
+-def _fit_s(D, a0, logp, tol=1e-7, maxiter=1000):
++def _fit_s(D, a0, logp, tol=1e-7, maxiter=1000, prior_std=None):
+     """Update parameters via MLE of precision with fixed mean
+ 
+     Parameters
+@@ -320,6 +324,9 @@ def _fit_s(D, a0, logp, tol=1e-7, maxiter=1000):
+         s0 = s1
+         g = psi(s1) - (m * psi(s1 * m)).sum() + mlogp
+         h = _trigamma(s1) - ((m ** 2) * _trigamma(s1 * m)).sum()
++        if prior_std:
++            g += - s1 / prior_std ** 2
++            h += - 1 / prior_std ** 2
+ 
+         if g + s1 * h < 0:
+             s1 = 1 / (1 / s0 + g / h / (s0 ** 2))
+@@ -374,7 +381,7 @@ def _fit_m(D, a0, logp, tol=1e-7, maxiter=1000):
+     raise NotConvergingError(f"Failed to converge after {maxiter} iterations, " f"s is {s}")
+ 
+ 
+-def _init_a(D):
++def _init_a(D, eps=1e-10):
+     """Initial guess for Dirichlet alpha parameters given data D
+ 
+     Parameters
+@@ -389,7 +396,11 @@ def _init_a(D):
+         Crude guess for parameters of Dirichlet distribution."""
+     E = D.mean(axis=0)
+     E2 = (D ** 2).mean(axis=0)
+-    return ((E[0] - E2[0]) / (E2[0] - E[0] ** 2)) * E
++    s = np.median((E - E2) / (E2 - E ** 2 + eps))
++    if s == 0.0:
++        return E
++    else:
++        return s * E
+ 
+ 
+ def _ipsi(y, tol=1.48e-9, maxiter=10):

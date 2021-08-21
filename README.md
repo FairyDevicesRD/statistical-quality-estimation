@@ -2,11 +2,11 @@ This is an implementation of the paper [Quality estimation for partially subject
 
 # Install
 ```
-pip install -r requirements.txt
+pip install -r requirements.txt --src=.
 
 # apply the patch
 cd dirichlet
-patch -p1 < ../dirichet.patch
+patch -p1 < ../dirichlet.patch
 ```
 
 # Configuration
